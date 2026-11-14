@@ -61,7 +61,15 @@ h1{font-size:2.1rem;line-height:1;font-weight:800;letter-spacing:-.03em;margin:0
 .nm{min-width:0;font-weight:600;overflow-wrap:anywhere}
 .nm small{display:block;font-weight:400;color:var(--muted);font-size:.76rem}
 .qty{font-variant-numeric:tabular-nums;font-weight:600;font-size:.95rem;white-space:nowrap;text-align:right}
-.morebtn{width:40px;height:40px;border:0;background:none;font-size:1.3rem;line-height:1;font-weight:700;color:var(--muted)}
+.stores{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--ink);margin:0 0 10px}
+.stores button{min-height:44px;border:0;background:#fff;font-weight:700;font-size:.78rem;padding:0 2px}
+.stores button+button{border-left:1px solid var(--ink)}
+.stores button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.storelab{font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:12px 0 6px}
+.storehint{color:var(--muted);font-size:.84rem;margin:0 0 10px}
+.findbtn{flex:none;width:36px;height:40px;display:flex;align-items:center;justify-content:center;border:0;background:none;color:var(--ink);font-weight:800;font-size:1.15rem;text-decoration:none}
+.findbtn:active{background:var(--ink);color:#fff}
+.morebtn{width:36px;height:40px;border:0;background:none;font-size:1.3rem;line-height:1;font-weight:700;color:var(--muted)}
 input[type=checkbox]{flex:none;width:26px;height:26px;border:2px solid var(--ink);background:#fff;margin:0;position:relative}
 input[type=checkbox]:checked{background:var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E") center/20px no-repeat}
 .basket .nm,.basket .qty{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1.5px}
@@ -406,16 +414,23 @@ function seed(){
       {id:'r2',title:'Chickpea and spinach curry',url:'',servings:4,want:4,on:true,example:true,lines:['2 tbsp olive oil','1 onion, diced','3 garlic cloves, minced','20g fresh ginger, grated','2 tsp garam masala','1 tsp ground cumin','1 tsp ground turmeric','400g tin chopped tomatoes','400g tin coconut milk','2 x 400g tins chickpeas, drained','200g baby spinach','250g basmati rice','½ lemon, juiced','small bunch fresh coriander','½ tsp salt']},
       {id:'r3',title:'Sausage and potato traybake',url:'',servings:4,want:4,on:false,example:true,lines:['8 pork sausages','500g baby potatoes, halved','2 red onions, cut into wedges','2 courgettes, sliced','3 garlic cloves, whole','2 tbsp olive oil','1 tsp dried oregano','1 tbsp wholegrain mustard']}
     ],
-    extras:[], checked:{}, have:{}, aisle:{}
+    extras:[], checked:{}, have:{}, aisle:{}, store:''
   };
 }
-function normalise(s){ s.extras=s.extras||[]; s.checked=s.checked||{}; s.have=s.have||{}; s.aisle=s.aisle||{}; return s; }
+function normalise(s){ s.store=s.store||''; s.extras=s.extras||[]; s.checked=s.checked||{}; s.have=s.have||{}; s.aisle=s.aisle||{}; return s; }
 function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)); if(s&&Array.isArray(s.recipes)) return normalise(s); }catch(e){} return null; }
 let S=load()||seed();
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
 const U={tab:'list',open:{},sheet:null,detailId:null,editId:null,etab:'paste',confirmDel:false};
 let tt; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),1800); }
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return ''; } }
+const STORES={
+  waitrose:{name:'Waitrose',url:q=>'https://www.waitrose.com/ecom/shop/search?&searchTerm='+q},
+  ms:{name:'M&S',url:q=>'https://www.marksandspencer.com/search?searchTerm='+q},
+  sainsburys:{name:"Sainsbury's",url:q=>'https://www.sainsburys.co.uk/gol-ui/SearchResults/'+q},
+  aldi:{name:'Aldi',url:q=>'https://www.aldi.co.uk/results?q='+q}
+};
+function findLink(i){ const st=STORES[S.store]; return st?st.url(encodeURIComponent(i.name.toLowerCase())):''; }
 const safeId=k=>k.replace(/[^a-z0-9]/gi,'-');
 
 /* ---------- list screen ---------- */
@@ -423,9 +438,10 @@ function rowHTML(i,basket){
   const ck=!!S.checked[i.key], open=!!U.open[i.key], id='tk-'+safeId(i.key);
   const more=open?`<div class="detail"><ul>${i.contribs.map(c=>`<li><span>${esc(c.from)}</span><b>${esc(c.text)}</b></li>`).join('')}</ul>
     <div class="drow"><label for="ai-${id}">Aisle</label><select id="ai-${id}" data-act="aisle" data-key="${esc(i.key)}">${AISLES.map(a=>`<option ${a===i.aisle?'selected':''}>${esc(a)}</option>`).join('')}</select>
-    <button class="btn small" data-act="have" data-key="${esc(i.key)}">Already have it</button></div></div>`:'';
+    <button class="btn small" data-act="have" data-key="${esc(i.key)}">Already have it</button>${S.store?`<a class="btn small" href="${esc(findLink(i))}" target="_blank" rel="noopener">Find at ${esc(STORES[S.store].name)} ↗</a>`:''}</div></div>`:'';
   return `<li class="row"><div class="rowmain"><label class="tick" for="${id}"><input type="checkbox" id="${id}" data-act="tick" data-key="${esc(i.key)}" ${ck?'checked':''}><span class="nm">${esc(i.name)}<small>${esc(i.sources.join(' · '))}</small></span></label>
     <span class="qty">${esc(i.amount||'as needed')}</span>
+    ${S.store?`<a class="findbtn" href="${esc(findLink(i))}" target="_blank" rel="noopener" aria-label="Find ${esc(i.name)} at ${esc(STORES[S.store].name)}">↗</a>`:''}
     <button class="morebtn" data-act="open" data-key="${esc(i.key)}" aria-label="Details for ${esc(i.name)}" aria-expanded="${open}">${open?'−':'⋯'}</button></div>${more}</li>`;
 }
 function listHTML(){
@@ -436,7 +452,10 @@ function listHTML(){
   const got=active.filter(i=>S.checked[i.key]).sort((a,b)=>a.name.localeCompare(b.name));
   const onN=S.recipes.filter(r=>r.on).length;
   const pct=active.length?Math.round(got.length/active.length*100):0;
-  let h=`<div class="summary"><div class="sumtop"><b>${todo.length} to get</b><span>${onN} ${onN===1?'recipe':'recipes'} · ${got.length} in basket</span></div>
+  const st=STORES[S.store];
+  let h=`<div class="summary"><div class="storelab" id="store-lab">Shopping at</div>
+    <div class="stores" role="group" aria-labelledby="store-lab">${Object.keys(STORES).map(k=>`<button data-act="store" data-s="${k}" aria-pressed="${S.store===k}">${esc(STORES[k].name)}</button>`).join('')}</div>
+    <p class="storehint">${st?`Tap ↗ on any item to search ${esc(st.name)} for it.`:'Pick your supermarket to get a search link on every item.'}</p><div class="sumtop"><b>${todo.length} to get</b><span>${onN} ${onN===1?'recipe':'recipes'} · ${got.length} in basket</span></div>
     <div class="progress" aria-hidden="true"><i style="width:${pct}%"></i></div>
     <div class="sumbtns"><button class="btn small" data-act="copy">Copy remaining</button><button class="btn small" data-act="untick">Untick all</button></div><div id="copybox"></div></div>`;
   if(!active.length){
@@ -601,6 +620,7 @@ document.addEventListener('click',async e=>{
     case 'open': U.open[key]=!U.open[key]; render(); break;
     case 'have': S.have[key]=true; render(); break;
     case 'unhave': delete S.have[key]; render(); break;
+    case 'store': S.store=(S.store===t.dataset.s)?'':t.dataset.s; render(); break;
     case 'untick': S.checked={}; render(); break;
     case 'rmextra': S.extras.splice(+t.dataset.n,1); render(); break;
     case 'copy': {
