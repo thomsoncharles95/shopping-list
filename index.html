@@ -241,17 +241,28 @@ const ALIAS=[
   [/^(grated )?(parmesan|parmigiano reggiano)( cheese)?$/,'parmesan'],
   [/^(baby )?spinach( leaves)?$/,'spinach'],
   [/^garlic( cloves?)?$/,'garlic'],
-  [/^(fresh )?ginger( root)?$/,'ginger']
+  [/^(fresh )?ginger( root)?$/,'ginger'],
+  [/^(vegetable|veg|chicken|beef|fish|lamb) (stock|bouillon)( cubes?| pots?| powder)?$|^(vegetable|veg|chicken|beef|fish|lamb) stock cubes?$/,m=>m],
+  [/^tomato pur[ée]e$/,'tomato puree'],
+  [/^(sea |table |kosher )?salt( flakes)?$/,'salt'],
+  [/^(black )?pepper$|^freshly ground black pepper$/,'black pepper'],
+  [/^(strong |bread |white |strong white )+(bread )?flour$/,'bread flour'],
+  [/^(self[- ]raising|self raising) flour$/,'self-raising flour'],
+  [/^(greek|natural|plain) yoh?gurt$/,m=>m.replace('yohgurt','yoghurt')],
+  [/^(cherry|baby plum|vine|salad) tomatoes?$/,m=>m],
+  [/^(mature|mild|strong|extra mature) cheddar( cheese)?$/,'cheddar']
 ];
 function cleanName(s){
   s=s.toLowerCase().replace(/\([^)]*\)/g,' ').split(',')[0];
   s=s.replace(/\b(to taste|to serve|for serving|for frying|for garnish|to garnish|for drizzling|optional|plus extra|plus more)\b.*$/,'');
   s=s.replace(/\s+/g,' ').replace(/^of\s+/,'').trim();
   s=s.replace(/^(tins?|cans?|packs?|packets?|jars?|bottles?|bags?|cartons?|tubs?)\s+(?:of\s+)?/,'');
-  s=s.replace(/^(?:(?:large|small|medium|big|fresh|ripe|good quality|good|thick|thin|finely|roughly|freshly|coarsely|thinly|lightly)\s+)+/,'');
+  s=s.replace(/^(?:juice|zest|rind|juice and zest|zest and juice)\s+of\s+(?:(?:half an?|an?|\d+(?:\/\d+)?)\s+)?/,'');
+  s=s.replace(/^(?:(?:a |an )?(?:small |large |big )?(?:handful|bunch|pinch|knob|splash|dash|glug|sprig|sprigs)\s+of\s+)/,'');
+  s=s.replace(/\b(?:large|small|medium|big|fresh|freshly|ripe|good quality|good|thick|thin|finely|roughly|coarsely|thinly|lightly|skinless|boneless|free[- ]range|organic|full[- ]fat|low[- ]fat|reduced[- ]fat|semi[- ]skimmed|lean|hot|cold|warm|fine|runny|light|flat[- ]leaf|italian|plum|ready[- ]to[- ]eat|unsalted|salted)\b\s*/g,'');
   if(!/tomato/.test(s)) s=s.replace(/^(?:(?:chopped|diced|sliced|minced|grated|crushed|peeled|shredded|cubed|melted)\s+)+/,'');
   s=s.replace(/[.;:]+$/,'').trim();
-  for(const [re,to] of ALIAS){ if(re.test(s)){ s=to; break; } }
+  for(const [re,to] of ALIAS){ if(re.test(s)){ s=typeof to==='function'?to(s):to; break; } }
   return s;
 }
 const SING_X=/^(molasses|swiss|watercress|hummus|couscous|asparagus|cress|citrus|lemongrass|hummous)$/;
