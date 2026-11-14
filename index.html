@@ -68,12 +68,6 @@ h1{font-size:2.1rem;line-height:1;font-weight:800;letter-spacing:-.03em;margin:0
 .stores button[aria-pressed="true"]{background:var(--ink);color:#fff}
 .storelab{font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:12px 0 6px}
 .storehint{color:var(--muted);font-size:.84rem;margin:0 0 10px}
-.est{border-top:1px solid var(--rule);margin:12px 0;padding-top:10px}
-.esttop{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.esttop b{font-size:1.25rem;letter-spacing:-.01em}
-.esttop span{color:var(--muted);font-size:.86rem}
-.pr{display:block;font-weight:500;color:var(--muted);font-size:.76rem}
-.priceline{margin:0;font-size:.86rem;font-weight:600}
 .findbtn{flex:none;width:36px;height:40px;display:flex;align-items:center;justify-content:center;border:0;background:none;color:var(--ink);font-weight:800;font-size:1.15rem;text-decoration:none}
 .findbtn:active{background:var(--ink);color:#fff}
 .morebtn{width:36px;height:40px;border:0;background:none;font-size:1.3rem;line-height:1;font-weight:700;color:var(--muted)}
@@ -437,49 +431,24 @@ const STORES={
   sainsburys:{name:"Sainsbury's",url:q=>'https://www.sainsburys.co.uk/gol-ui/SearchResults/'+q},
   aldi:{name:'Aldi',url:q=>'https://www.aldi.co.uk/results?q='+q}
 };
-/* Rough shelf prices, gathered by hand from online price listings (Trolley.co.uk, Ocado M&S listings). Not live. */
-const PRICES={
-  ms:{date:'Nov 2026',items:{
-    'chopped tomato':{u:'w',pack:400,price:0.50,label:'Chopped Italian Tomatoes 400g'},
-    'beef mince':{u:'w',pack:500,price:4.50,label:'Select Farms Beef Mince 12% fat 500g'},
-    'spaghetti':{u:'w',pack:500,price:0.75,label:'Spaghetti 500g'},
-    'chickpea':{u:'w',pack:400,price:0.65,label:'Chickpeas in Water 400g'},
-    'coconut milk':{u:'w',pack:400,price:1.30,label:'Coconut Milk 400ml'},
-    'basmati rice':{u:'w',pack:500,price:1.65,label:'Wholegrain Basmati Rice 500g'},
-    'olive oil':{u:'v',pack:500,price:6.00,label:'Extra Virgin Olive Oil 500ml'},
-    'parmesan':{u:'w',pack:200,price:5.00,label:'Parmigiano Reggiano 200g'},
-    'carrot':{u:'c',pack:8,price:0.55,label:'Carrots (about 8)'},
-    'onion':{u:'c',pack:8,price:1.00,label:'Brown Cooking Onions 1kg'},
-    'garlic':{u:'c',pack:30,price:0.90,label:'Garlic bulbs (about 30 cloves)'},
-    'spinach':{u:'w',pack:200,price:1.10,label:'Spinach Washed & Ready to Eat'}
-  }}
-};
-function estimate(i){
-  const t=PRICES[S.store]; if(!t) return null;
-  const p=t.items[i.key]; if(!p) return null;
-  const need=i.groups[p.u]; if(!need) return null;
-  const packs=Math.max(1,Math.ceil(need/p.pack-0.02));
-  return {packs,each:p.price,cost:packs*p.price,label:p.label};
-}
 function findLink(i){ const st=STORES[S.store]; return st?st.url(encodeURIComponent(i.name.toLowerCase())):''; }
 const safeId=k=>k.replace(/[^a-z0-9]/gi,'-');
 
 /* ---------- list screen ---------- */
 function rowHTML(i,basket,nf){
   const ck=!!S.checked[i.key], open=!!U.open[i.key], id='tk-'+safeId(i.key);
-  const more=open?`<div class="detail">${i.est?`<p class="priceline">${i.est.packs} × ${esc(i.est.label)} at £${i.est.each.toFixed(2)} each. Rough online price, not live.</p>`:''}<ul>${i.contribs.map(c=>`<li><span>${esc(c.from)}</span><b>${esc(c.text)}</b></li>`).join('')}</ul>
+  const more=open?`<div class="detail"><ul>${i.contribs.map(c=>`<li><span>${esc(c.from)}</span><b>${esc(c.text)}</b></li>`).join('')}</ul>
     <div class="drow"><label for="ai-${id}">Aisle</label><select id="ai-${id}" data-act="aisle" data-key="${esc(i.key)}">${AISLES.map(a=>`<option ${a===i.aisle?'selected':''}>${esc(a)}</option>`).join('')}</select>
     <button class="btn small" data-act="have" data-key="${esc(i.key)}">Already have it</button>${S.store?`<a class="btn small" href="${esc(findLink(i))}" target="_blank" rel="noopener">Find at ${esc(STORES[S.store].name)} ↗</a><button class="btn small" data-act="nf" data-key="${esc(i.key)}">Can't find it</button>`:''}</div></div>`:'';
   const others=nf?Object.keys(STORES).filter(k=>k!==S.store).map(k=>`<a class="btn small" href="${esc(STORES[k].url(encodeURIComponent(i.name.toLowerCase())))}" target="_blank" rel="noopener">${esc(STORES[k].name)} ↗</a>`).join(''):'';
   const nfBlock=nf?`<div class="detail"><div class="drow"><span>Try:</span>${others}<button class="btn small" data-act="unnf" data-key="${esc(i.key)}">Back to ${esc(STORES[S.store].name)}</button></div></div>`:'';
   return `<li class="row"><div class="rowmain"><label class="tick" for="${id}"><input type="checkbox" id="${id}" data-act="tick" data-key="${esc(i.key)}" ${ck?'checked':''}><span class="nm">${esc(i.name)}<small>${esc(i.sources.join(' · '))}</small></span></label>
-    <span class="qty">${esc(i.amount||'as needed')}${i.est?`<small class="pr">≈ £${i.est.cost.toFixed(2)}</small>`:''}</span>
+    <span class="qty">${esc(i.amount||'as needed')}</span>
     ${S.store&&!nf?`<a class="findbtn" href="${esc(findLink(i))}" target="_blank" rel="noopener" aria-label="Find ${esc(i.name)} at ${esc(STORES[S.store].name)}">↗</a>`:''}
     <button class="morebtn" data-act="open" data-key="${esc(i.key)}" aria-label="Details for ${esc(i.name)}" aria-expanded="${open}">${open?'−':'⋯'}</button></div>${nf?nfBlock:more}</li>`;
 }
 function listHTML(){
   const items=compute(S);
-  items.forEach(i=>{ i.est=estimate(i); });
   const active=items.filter(i=>!S.have[i.key]);
   const haveItems=items.filter(i=>S.have[i.key]);
   const nfItems=active.filter(i=>S.store&&S.notfound[i.key]&&!S.checked[i.key]);
@@ -487,15 +456,12 @@ function listHTML(){
   const got=active.filter(i=>S.checked[i.key]).sort((a,b)=>a.name.localeCompare(b.name));
   const onN=S.recipes.filter(r=>r.on).length;
   const pct=active.length?Math.round(got.length/active.length*100):0;
-  const priced=active.filter(i=>i.est), total=priced.reduce((a,i)=>a+i.est.cost,0);
-  const pt=PRICES[S.store];
-  const estBox=pt?`<div class="est"><div class="esttop"><b>About £${total.toFixed(2)}</b><span>${priced.length} of ${active.length} items priced</span></div><p class="storehint" style="margin:6px 0 0">Rough ${esc(STORES[S.store].name)} online prices from ${esc(pt.date)}. Items with no price aren't counted.</p></div>`:'';
   const st=STORES[S.store];
   let h=`<div class="summary"><div class="storelab" id="store-lab">Shopping at</div>
     <div class="stores" role="group" aria-labelledby="store-lab">${Object.keys(STORES).map(k=>`<button data-act="store" data-s="${k}" aria-pressed="${S.store===k}">${esc(STORES[k].name)}</button>`).join('')}</div>
     <p class="storehint">${st?`Tap ↗ to search ${esc(st.name)} for an item. If it isn't there, open ⋯ and tap Can't find it.`:'Pick your supermarket to get a search link on every item.'}</p><div class="sumtop"><b>${todo.length} to get</b><span>${onN} ${onN===1?'recipe':'recipes'} · ${got.length} in basket${nfItems.length?` · ${nfItems.length} elsewhere`:''}</span></div>
     <div class="progress" aria-hidden="true"><i style="width:${pct}%"></i></div>
-    ${estBox}<div class="sumbtns"><button class="btn small" data-act="copy">Copy remaining</button><button class="btn small" data-act="untick">Untick all</button></div><div id="copybox"></div></div>`;
+    <div class="sumbtns"><button class="btn small" data-act="copy">Copy remaining</button><button class="btn small" data-act="untick">Untick all</button></div><div id="copybox"></div></div>`;
   if(!active.length){
     h+=`<div class="empty">${S.recipes.length?'Switch on a recipe to build your list.':'Add a recipe to build your list.'}</div>`;
   } else {
