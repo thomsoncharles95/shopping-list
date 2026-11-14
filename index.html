@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Shopping List">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<title>Shopping List</title>
+<style>
+/* Layout: large-title header, one card grid per screen, fixed bottom tab bar. Square corners throughout. */
+:root{
+  --ink:#111; --muted:#6a6a6a; --rule:#dcdcdc; --mid:#bdbdbd; --ok:#13803a; --warn:#b25000; --bg:#fff;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  --tab:56px; --sb:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+*{box-sizing:border-box;border-radius:0!important;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg)}
+body{color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.4;-webkit-text-size-adjust:100%;touch-action:manipulation;
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) calc(var(--tab) + var(--sb) + 28px) max(16px,env(safe-area-inset-left,0px))}
+button,input,select,textarea{font:inherit;color:inherit;-webkit-appearance:none;appearance:none;border-radius:0}
+button{cursor:pointer}
+:focus-visible{outline:2px solid #1a44ea;outline-offset:2px}
+#app{max-width:980px;margin:0 auto}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:18px 0 14px}
+h1{font-size:2.1rem;line-height:1;font-weight:800;letter-spacing:-.03em;margin:0}
+.btn{min-height:44px;padding:0 16px;border:1px solid var(--ink);background:#fff;font-weight:600;font-size:.95rem;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{background:var(--ink);color:#fff}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:active{background:#fff;color:var(--ink)}
+.btn.small{min-height:36px;padding:0 12px;font-size:.86rem}
+.btn.danger{color:var(--warn);border-color:var(--warn)}
+.btn[disabled]{opacity:.45}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px;align-items:start}
+.rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:640px){.rgrid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
+/* summary */
+.summary{border:1px solid var(--ink);padding:14px;margin-bottom:12px}
+.sumtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sumtop b{font-size:1.6rem;letter-spacing:-.02em}
+.sumtop span{color:var(--muted);font-size:.9rem}
+.progress{height:6px;background:var(--rule);margin:10px 0 12px}
+.progress i{display:block;height:100%;background:var(--ink);width:0}
+.sumbtns{display:flex;gap:8px;flex-wrap:wrap}
+/* aisle cards */
+.card{border:1px solid var(--ink);background:#fff}
+.card>h2{margin:0;padding:10px 14px;border-bottom:1px solid var(--ink);font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:flex;justify-content:space-between}
+.card>h2 span{font-weight:500;color:var(--muted)}
+.rows{list-style:none;margin:0;padding:0 14px}
+.row{border-top:1px solid var(--rule)}
+.row:first-child{border-top:0}
+.rowmain{display:flex;align-items:center;gap:10px;min-height:56px}
+.tick{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:8px 0;cursor:pointer}
+.nm{min-width:0;font-weight:600;overflow-wrap:anywhere}
+.nm small{display:block;font-weight:400;color:var(--muted);font-size:.76rem}
+.qty{font-variant-numeric:tabular-nums;font-weight:600;font-size:.95rem;white-space:nowrap;text-align:right}
+.morebtn{width:40px;height:40px;border:0;background:none;font-size:1.3rem;line-height:1;font-weight:700;color:var(--muted)}
+input[type=checkbox]{flex:none;width:26px;height:26px;border:2px solid var(--ink);background:#fff;margin:0;position:relative}
+input[type=checkbox]:checked{background:var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E") center/20px no-repeat}
+.basket .nm,.basket .qty{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1.5px}
+.basket{border-color:var(--mid)}
+.basket>h2{border-bottom-color:var(--mid);color:var(--muted)}
+.detail{padding:2px 0 14px 38px;display:grid;gap:10px;font-size:.9rem}
+.detail ul{list-style:none;margin:0;padding:0;color:var(--muted)}
+.detail li{display:flex;justify-content:space-between;gap:10px}
+.detail li b{color:var(--ink);font-variant-numeric:tabular-nums}
+.drow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select{border:1px solid var(--ink);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23111' stroke-width='1.6'/%3E%3C/svg%3E") right 10px center/12px no-repeat;padding:0 30px 0 10px;min-height:36px;font-size:16px}
+.addcard{padding:14px}
+.addcard form{display:flex;gap:8px}
+.addcard input[type=text]{flex:1;min-width:0;min-height:44px;border:1px solid var(--ink);padding:0 12px;background:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--ink);padding:2px 2px 2px 10px;font-size:.86rem}
+.chip button{border:0;background:none;width:30px;height:30px;font-weight:700;font-size:1.05rem}
+.havecard{padding:12px 14px}
+.havecard summary{cursor:pointer;font-weight:600;min-height:32px;display:flex;align-items:center}
+.havecard ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}
+.havecard li{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.empty{border:1px dashed var(--mid);padding:28px 16px;text-align:center;color:var(--muted)}
+/* recipe cards */
+.rcard{border:1px solid var(--mid);background:#fff;display:flex;flex-direction:column;min-height:168px}
+.rcard.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.rhead{flex:1;text-align:left;border:0;background:none;padding:12px 12px 8px;display:flex;flex-direction:column;gap:6px;width:100%}
+.rtop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.rbox{flex:none;width:22px;height:22px;border:2px solid var(--mid);margin-left:auto}
+.rcard.on .rbox{border-color:var(--ink);background:var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E") center/16px no-repeat}
+.rtitle{font-weight:700;font-size:1.05rem;line-height:1.2;letter-spacing:-.01em;overflow-wrap:anywhere}
+.rcard:not(.on) .rtitle{color:var(--muted)}
+.meta{font-size:.8rem;color:var(--muted)}
+.tag{display:inline-block;border:1px solid var(--muted);color:var(--muted);font-size:.64rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:1px 5px;align-self:flex-start}
+.rfoot{display:flex;flex-direction:column;align-items:stretch;border-top:1px solid var(--rule);padding:8px;gap:8px}
+.rfoot .btn{width:100%}
+.rcard.on .rfoot{border-top-color:var(--ink)}
+.stepper{display:flex;align-items:center;justify-content:space-between}
+.stepper output{flex:1}
+.stepper button{width:34px;height:34px;border:1px solid var(--ink);background:#fff;font-size:1.2rem;font-weight:700;line-height:1;padding:0}
+.stepper button:active{background:var(--ink);color:#fff}
+.stepper output{min-width:30px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.newcard{border:1px dashed var(--ink);background:#fff;min-height:168px;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.footlinks{margin-top:18px;display:grid;gap:12px}
+.footlinks .card{padding:12px 14px}
+.footlinks summary{cursor:pointer;font-weight:600;min-height:32px;display:flex;align-items:center}
+.footlinks p{color:var(--muted);font-size:.86rem;margin:6px 0}
+.footlinks textarea{width:100%;min-height:90px;border:1px solid var(--ink);padding:8px;font-size:16px;margin:6px 0}
+/* tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff;border-top:1px solid var(--ink);padding-bottom:var(--sb);z-index:10}
+.tabbar button{height:var(--tab);border:0;border-right:1px solid var(--ink);background:#fff;font-weight:700;font-size:.9rem;letter-spacing:.02em}
+.tabbar button:last-child{border-right:0}
+.tabbar button[aria-current="page"]{background:var(--ink);color:#fff}
+.tabbar button:active{background:var(--ink);color:#fff}
+/* sheets */
+.sheet{position:fixed;inset:0;background:#fff;z-index:20;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.sheet[hidden]{display:none}
+.shead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--ink)}
+.shead h2{margin:0;font-size:1.05rem;font-weight:800;letter-spacing:-.01em;min-width:0;overflow-wrap:anywhere}
+.sbody{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:16px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;max-width:760px;width:100%;margin:0 auto}
+.sfoot{border-top:1px solid var(--ink);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + var(--sb)) max(16px,env(safe-area-inset-left,0px));display:flex;gap:8px}
+.sfoot .btn{flex:1}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink)}
+.seg button{min-height:44px;border:0;background:#fff;font-weight:700}
+.seg button+button{border-left:1px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.field{display:grid;gap:6px}
+.field label{font-weight:700;font-size:.86rem}
+.field input,.field textarea{border:1px solid var(--ink);background:#fff;padding:10px 12px;width:100%;font-size:16px;min-height:46px}
+.field textarea{min-height:200px;line-height:1.5;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 96px;gap:10px}
+.hint{color:var(--muted);font-size:.86rem;margin:0}
+.status{min-height:1.3em;font-size:.9rem;font-weight:600}
+.status.err{color:var(--warn)}
+.plist{list-style:none;margin:0;padding:0;border:1px solid var(--ink)}
+.plist li{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-top:1px solid var(--rule);font-size:.92rem}
+.plist li:first-child{border-top:0}
+.plist .p{color:var(--muted);font-size:.8rem;text-align:right;font-variant-numeric:tabular-nums}
+.plist .bad .p{color:var(--warn);font-weight:600}
+.toast{position:fixed;left:50%;bottom:calc(var(--tab) + var(--sb) + 14px);transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;font-size:.9rem;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;white-space:nowrap}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar"><h1 id="title">Shopping list</h1><div id="topact"></div></header>
+  <main id="screen"></main>
+</div>
+
+<nav class="tabbar" aria-label="Main">
+  <button id="tab-list" data-act="tab" data-t="list">List</button>
+  <button id="tab-recipes" data-act="tab" data-t="recipes">Recipes</button>
+  <button id="tab-add" data-act="new">+ Add</button>
+</nav>
+
+<section class="sheet" id="sheet-detail" hidden aria-label="Recipe">
+  <div class="shead"><h2 id="d-title">Recipe</h2><button class="btn small" data-act="close">Close</button></div>
+  <div class="sbody" id="d-body"></div>
+  <div class="sfoot" id="d-foot"></div>
+</section>
+
+<section class="sheet" id="sheet-edit" hidden aria-label="Add or edit recipe">
+  <div class="shead"><h2 id="ed-heading">Add a recipe</h2><button class="btn small" data-act="close">Cancel</button></div>
+  <div class="sbody">
+    <div class="seg" role="group" aria-label="How to add" id="seg">
+      <button data-act="etab" data-t="paste" id="etab-paste" aria-pressed="true">From a website</button>
+      <button data-act="etab" data-t="form" id="etab-form" aria-pressed="false">Write my own</button>
+    </div>
+    <div id="pane-paste" class="field">
+      <label for="ed-paste">Paste the recipe</label>
+      <textarea id="ed-paste" placeholder="Paste the recipe text here"></textarea>
+      <p class="hint">In Safari, open the recipe, tap and hold the text, choose Select All, then Copy. Come back here and paste. The ingredients list is found for you.</p>
+      <button class="btn primary" data-act="extract" id="btn-extract">Find the ingredients</button>
+    </div>
+    <div id="pane-form" style="display:none;flex-direction:column;gap:14px">
+      <div class="two">
+        <div class="field"><label for="ed-title">Recipe name</label><input id="ed-title" type="text" autocomplete="off"></div>
+        <div class="field"><label for="ed-serves">Serves</label><input id="ed-serves" type="number" inputmode="numeric" min="1" max="99" value="4"></div>
+      </div>
+      <div class="field"><label for="ed-url">Link (optional)</label><input id="ed-url" type="url" inputmode="url" placeholder="https://" autocomplete="off" autocapitalize="off"></div>
+      <div class="field">
+        <label for="ed-lines">Ingredients, one per line</label>
+        <textarea id="ed-lines" placeholder="400g tin chopped tomatoes&#10;2 onions, diced&#10;3 garlic cloves&#10;1 tbsp olive oil"></textarea>
+        <p class="hint">Write amounts like 200g, 2 tbsp, 1½ cups or a pinch of salt. A line ending in a colon is a heading and is ignored.</p>
+      </div>
+    </div>
+    <div class="status" id="ed-status" role="status" aria-live="polite"></div>
+  </div>
+  <div class="sfoot"><button class="btn primary" data-act="save" id="btn-save" style="display:none">Save recipe</button></div>
+</section>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+
+const UF={'½':'1/2','⅓':'1/3','⅔':'2/3','¼':'1/4','¾':'3/4','⅕':'1/5','⅖':'2/5','⅗':'3/5','⅘':'4/5','⅙':'1/6','⅚':'5/6','⅛':'1/8','⅜':'3/8','⅝':'5/8','⅞':'7/8'};
+const UFC='½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞';
+const WU={g:1,gram:1,grams:1,gr:1,kg:1000,kilo:1000,kilos:1000,kilogram:1000,kilograms:1000,oz:28.3495,ounce:28.3495,ounces:28.3495,lb:453.592,lbs:453.592,pound:453.592,pounds:453.592};
+const VU={ml:1,millilitre:1,millilitres:1,milliliter:1,milliliters:1,l:1000,litre:1000,litres:1000,liter:1000,liters:1000,cl:10,dl:100,tsp:5,teaspoon:5,teaspoons:5,tbsp:15,tbs:15,tablespoon:15,tablespoons:15,cup:240,cups:240,pint:568,pints:568};
+const NU={clove:'clove',cloves:'clove',sprig:'sprig',sprigs:'sprig',bunch:'bunch',bunches:'bunch',handful:'handful',handfuls:'handful',pinch:'pinch',pinches:'pinch',dash:'dash',dashes:'dash',slice:'slice',slices:'slice',stick:'stick',sticks:'stick',stalk:'stalk',stalks:'stalk',head:'head',heads:'head',knob:'knob',knobs:'knob',tin:'tin',tins:'tin',can:'can',cans:'can',pack:'pack',packs:'pack',packet:'packet',packets:'packet',jar:'jar',jars:'jar',bottle:'bottle',bottles:'bottle',bag:'bag',bags:'bag',piece:'piece',pieces:'piece',rasher:'rasher',rashers:'rasher',fillet:'fillet',fillets:'fillet',sheet:'sheet',sheets:'sheet',sachet:'sachet',sachets:'sachet',carton:'carton',cartons:'carton',tub:'tub',tubs:'tub',pot:'pot',pots:'pot'};
+const PL={bunch:'bunches',pinch:'pinches',dash:'dashes',sprig:'sprigs'};
+const SPOON=/^(tsp|teaspoons?|tbsp|tbs|tablespoons?)$/;
+const ALLU=Object.keys(WU).concat(Object.keys(VU),Object.keys(NU)).sort((a,b)=>b.length-a.length);
+const UNIT_RE=new RegExp('^('+ALLU.join('|')+')\\b\\.?\\s*(?:of\\s+)?','i');
+const SIZEW_RE=/^(?:large|small|medium|big|heaped|heaping|level|generous|rounded|good|decent)\s+/i;
+const QTY_RE=/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)(?:\s*(?:-|–|to)\s*(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?))?(?![\d/])\s*/;
+const WORDQ={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,'half':0.5,'half a':0.5,'half an':0.5};
+
+function toNum(s){
+  s=String(s).trim();
+  let m=s.match(/^(\d+)\s+(\d+)\/(\d+)$/); if(m) return +m[1]+ +m[2]/+m[3];
+  m=s.match(/^(\d+)\/(\d+)$/); if(m) return +m[1]/+m[2];
+  return parseFloat(s.replace(',','.'));
+}
+const ALIAS=[
+  [/^(extra[- ]virgin )?olive oil$/,'olive oil'],
+  [/^(sea |table |flaky |kosher )?salt$/,'salt'],
+  [/^ground black pepper$|^cracked black pepper$/,'black pepper'],
+  [/^(spring onions?|scallions?|green onions?)$/,'spring onion'],
+  [/^(coriander|cilantro)( leaves)?$/,'coriander'],
+  [/^(courgettes?|zucchinis?)$/,'courgette'],
+  [/^(aubergines?|eggplants?)$/,'aubergine'],
+  [/^(chickpeas?|garbanzo beans?)$/,'chickpea'],
+  [/^(tinned |canned )?(chopped|diced) tomatoes?$|^(tinned|canned) tomatoes?$/,'chopped tomato'],
+  [/^(beef mince|minced beef|ground beef|lean beef mince)$/,'beef mince'],
+  [/^(plain|all[- ]purpose) flour$/,'plain flour'],
+  [/^(tomato puree|tomato paste)$/,'tomato puree'],
+  [/^(grated )?(parmesan|parmigiano reggiano)( cheese)?$/,'parmesan'],
+  [/^(baby )?spinach( leaves)?$/,'spinach'],
+  [/^garlic( cloves?)?$/,'garlic'],
+  [/^(fresh )?ginger( root)?$/,'ginger']
+];
+function cleanName(s){
+  s=s.toLowerCase().replace(/\([^)]*\)/g,' ').split(',')[0];
+  s=s.replace(/\b(to taste|to serve|for serving|for frying|for garnish|to garnish|for drizzling|optional|plus extra|plus more)\b.*$/,'');
+  s=s.replace(/\s+/g,' ').replace(/^of\s+/,'').trim();
+  s=s.replace(/^(tins?|cans?|packs?|packets?|jars?|bottles?|bags?|cartons?|tubs?)\s+(?:of\s+)?/,'');
+  s=s.replace(/^(?:(?:large|small|medium|big|fresh|ripe|good quality|good|thick|thin|finely|roughly|freshly|coarsely|thinly|lightly)\s+)+/,'');
+  if(!/tomato/.test(s)) s=s.replace(/^(?:(?:chopped|diced|sliced|minced|grated|crushed|peeled|shredded|cubed|melted)\s+)+/,'');
+  s=s.replace(/[.;:]+$/,'').trim();
+  for(const [re,to] of ALIAS){ if(re.test(s)){ s=to; break; } }
+  return s;
+}
+const SING_X=/^(molasses|swiss|watercress|hummus|couscous|asparagus|cress|citrus|lemongrass|hummous)$/;
+function singular(name){
+  const w=name.split(' '); let l=w.pop();
+  if(SING_X.test(l)||/(ss|us|is)$/.test(l)){}
+  else if(l==='chillies') l='chilli';
+  else if(l==='leaves') l='leaf';
+  else if(l==='loaves') l='loaf';
+  else if(/ies$/.test(l)) l=l.slice(0,-3)+'y';
+  else if(/(ches|shes|xes|sses|oes)$/.test(l)) l=l.slice(0,-2);
+  else if(/s$/.test(l)) l=l.slice(0,-1);
+  w.push(l); return w.join(' ');
+}
+function parseLine(raw){
+  let s=String(raw).replace(/^[\s•●▪◦■□☐☑✓*\-–—]+/,'').trim();
+  if(!s||/:\s*$/.test(s)) return null;
+  s=s.replace(new RegExp('(\\d)\\s*(['+UFC+'])','g'),(m,d,f)=>d+' '+UF[f]).replace(new RegExp('['+UFC+']','g'),f=>UF[f]).replace(/\s+/g,' ');
+  let qty=null;
+  const m=s.match(QTY_RE);
+  if(m){ const a=toNum(m[1]), b=m[2]!=null?toNum(m[2]):null; qty=(b!=null&&b>a)?b:a; s=s.slice(m[0].length); }
+  else{
+    const w=s.match(/^(half an?|half|an?|one|two|three|four|five|six)\s+/i);
+    if(w){ qty=WORDQ[w[1].toLowerCase()]; s=s.slice(w[0].length); }
+  }
+  let size=null;
+  const pm=s.match(/^\(([^)]*)\)\s*/);
+  if(pm){
+    const sm=pm[1].match(/^(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|oz|lb)\b/i);
+    if(sm&&qty!=null) size={n:toNum(sm[1]),u:sm[2].toLowerCase()};
+    s=s.slice(pm[0].length);
+  }
+  if(qty!=null&&!size){
+    const xm=s.match(/^(?:[x×]\s*)?(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|oz|lb)\b\.?\s*/i);
+    if(xm){ size={n:toNum(xm[1]),u:xm[2].toLowerCase()}; s=s.slice(xm[0].length); }
+    else s=s.replace(/^[x×]\s+/i,'');
+  }
+  s=s.replace(SIZEW_RE,'');
+  let unit=null;
+  if(size) unit=size.u;
+  else{ const um=s.match(UNIT_RE); if(um){ unit=um[1].toLowerCase(); s=s.slice(um[0].length); } }
+  let name=cleanName(s);
+  if(!name) return null;
+  let fam='c', val=qty, spoon=false;
+  if(unit==null){
+    const nm=name.match(/^(.+?)\s+(cloves?|sprigs?|stalks?|rashers?|fillets?|slices?|sticks?)$/);
+    if(nm&&qty!=null){ unit=nm[2]; name=nm[1]; }
+  }
+  if(qty==null){
+    if(unit&&NU[unit]){ qty=1; val=1; } else { fam='none'; val=0; }
+  }
+  if(fam!=='none'){
+    const q=qty;
+    if(size){ const base=q*size.n; if(WU[size.u]){fam='w';val=base*WU[size.u];} else {fam='v';val=base*VU[size.u];} }
+    else if(unit&&WU[unit]){ fam='w'; val=q*WU[unit]; }
+    else if(unit&&VU[unit]){ fam='v'; val=q*VU[unit]; spoon=SPOON.test(unit); }
+    else if(unit&&NU[unit]){ fam='n:'+NU[unit]; val=q; }
+    else { fam='c'; val=q; }
+  }
+  return {qty,unit,fam,val,spoon,name,key:singular(name),display:name.charAt(0).toUpperCase()+name.slice(1)};
+}
+const AISLES=['Fresh produce','Meat & fish','Dairy & eggs','Bakery','Tins, dry & jars','Oils & sauces','Herbs & spices','Frozen','Other'];
+const RULES=[
+  ['Frozen',/frozen|ice cream/],
+  ['Herbs & spices',/(garlic|onion|ginger) (powder|granule)|chilli (flake|powder)|cumin|paprika|turmeric|cinnamon|oregano|garam masala|curry powder|nutmeg|cardamom|cayenne|bay leaf|mixed herb|dried |peppercorn|black pepper|white pepper|^salt|salt and|^pepper$|saffron|fennel seed|mustard seed|coriander seed|allspice|five spice|ras el hanout/],
+  ['Oils & sauces',/\boil\b|vinegar|soy|ketchup|mustard|mayo|sauce|puree|paste|honey|syrup|tahini|worcestershire|\bjam\b|pesto|dressing|chutney/],
+  ['Tins, dry & jars',/coconut milk|chopped tomato|plum tomato|tinned|passata|stock|bouillon|(kidney|black|baked|cannellini|butter|haricot|borlotti|pinto) bean|chickpea|lentil|tuna|sweetcorn|pasta|spaghetti|penne|fusilli|tagliatelle|lasagne|\brice\b|noodle|flour|sugar|\boats?\b|couscous|quinoa|baking powder|bicarb|cocoa|chocolate|breadcrumb|\bnuts?\b|almond|raisin|sultana|cornflour|\bolives?\b|peanut butter/],
+  ['Dairy & eggs',/milk|cream|butter|cheese|cheddar|parmesan|mozzarella|feta|yogh?urt|\beggs?\b|halloumi|ricotta|mascarpone|crème|creme|paneer|ghee/],
+  ['Meat & fish',/chicken|beef|pork|lamb|turkey|bacon|sausage|mince|\bham\b|chorizo|salmon|\bcod\b|haddock|prawn|shrimp|fish|steak|gammon|duck|anchov|mussel|squid|pancetta|salami|meatball/],
+  ['Bakery',/bread|\bbuns?\b|\brolls?\b|tortilla|wrap|pitta|pita|naan|baguette|croissant|bagel|crumpet|muffin/],
+  ['Fresh produce',/onion|garlic|tomato|potato|carrot|pepper|chilli|lemon|lime|orange|apple|banana|avocado|cucumber|lettuce|salad|rocket|spinach|kale|cabbage|mushroom|courgette|aubergine|broccoli|cauliflower|celery|leek|ginger|squash|pumpkin|beetroot|coriander|parsley|basil|mint|thyme|rosemary|dill|chive|sage|sprout|\bpeas?\b|\bbeans?\b|corn|fennel|asparagus|radish|turnip|swede|parsnip|berry|grape|mango|pear|peach|plum|pineapple|melon|herb|lemongrass|shallot/]
+];
+function classify(key){ for(const [a,re] of RULES) if(re.test(key)) return a; return 'Other'; }
+
+function fracStr(x){
+  const whole=Math.floor(x+1e-9), f=x-whole;
+  const F=[[0,''],[1/8,'⅛'],[1/4,'¼'],[1/3,'⅓'],[1/2,'½'],[2/3,'⅔'],[3/4,'¾'],[1,'']];
+  let best=F[0], bd=9;
+  for(const p of F){ const d=Math.abs(f-p[0]); if(d<bd){bd=d;best=p;} }
+  if(bd>0.04) return String(Math.round(x*100)/100);
+  const w=whole+(best[0]===1?1:0), fs=best[0]===1?'':best[1];
+  return ((w?String(w):'')+(w&&fs?' ':'')+fs)||'0';
+}
+function trim2(n){ return String(Math.round(n*100)/100); }
+function fmtG(g){ if(g>=1000) return trim2(g/1000)+' kg'; if(g>=100) return (Math.round(g/5)*5)+' g'; return Math.round(g)+' g'; }
+function fmtMl(m){ if(m>=1000) return trim2(m/1000)+' l'; if(m>=100) return (Math.round(m/5)*5)+' ml'; return Math.round(m)+' ml'; }
+function fmtSp(ml){ return ml>=14 ? fracStr(ml/15)+' tbsp' : fracStr(ml/5)+' tsp'; }
+function plural(u,n){ return n===1?u:(PL[u]||u+'s'); }
+function fmtFam(fam,v,spoon){
+  if(fam==='w') return fmtG(v);
+  if(fam==='v') return spoon&&v<240 ? fmtSp(v) : fmtMl(v);
+  if(fam==='c') return fracStr(v);
+  if(fam.startsWith('n:')){ const u=fam.slice(2); return fracStr(v)+' '+plural(u,v<=1.001?1:2); }
+  return '';
+}
+function amountText(e){
+  const order=Object.keys(e.groups).sort((a,b)=>{const r=f=>f==='w'?0:f==='v'?1:f==='c'?2:3; return r(a)-r(b)||a.localeCompare(b);});
+  return order.map(f=>{
+    const v=e.groups[f];
+    if(f==='w') return fmtG(v);
+    if(f==='v') return e.volSpoon&&v<240 ? fmtSp(v) : fmtMl(v);
+    const n=Math.max(1,Math.ceil(v-0.001));
+    if(f==='c') return String(n);
+    return n+' '+plural(f.slice(2),n);
+  }).join(' + ');
+}
+function compute(S){
+  const map=new Map();
+  const add=(line,title,scale)=>{
+    const p=parseLine(line); if(!p) return;
+    let e=map.get(p.key);
+    if(!e){ e={key:p.key,name:p.display,groups:{},volSpoon:true,contribs:[],sources:[]}; map.set(p.key,e); }
+    if(p.fam!=='none'){
+      const v=p.val*scale;
+      e.groups[p.fam]=(e.groups[p.fam]||0)+v;
+      if(p.fam==='v'&&!p.spoon) e.volSpoon=false;
+      e.contribs.push({from:title,text:fmtFam(p.fam,v,p.spoon)});
+    } else e.contribs.push({from:title,text:'as needed'});
+    if(!e.sources.includes(title)) e.sources.push(title);
+  };
+  for(const r of S.recipes){
+    if(!r.on) continue;
+    const scale=(r.want||r.servings||1)/(r.servings||1);
+    for(const l of r.lines) add(l,r.title,scale);
+  }
+  for(const l of S.extras) add(l,'Added by hand',1);
+  const out=[...map.values()];
+  for(const e of out){ e.amount=amountText(e); e.aisle=S.aisle[e.key]||classify(e.key); }
+  return out;
+}
+function extractLocal(text){
+  const jm=text.match(/"recipeIngredient"\s*:\s*(\[[^\]]*\])/);
+  if(jm){ try{ const arr=JSON.parse(jm[1]); const tm=text.match(/"name"\s*:\s*"([^"]+)"/); if(arr.length) return {title:tm?tm[1]:'',servings:null,ingredients:arr.map(String)}; }catch(e){} }
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  let title='', servings=null, ings=[];
+  const hi=lines.findIndex(l=>/^ingredients\b:?$/i.test(l));
+  if(hi>=0){
+    let end=lines.length;
+    for(let i=hi+1;i<lines.length;i++){ if(/^(method|instructions?|directions?|steps|preparation|to make|how to make|nutrition|notes)\b:?$/i.test(lines[i])){end=i;break;} }
+    ings=lines.slice(hi+1,end);
+  } else {
+    ings=lines.filter(l=>/^[\s•\-*]*(\d|[½⅓⅔¼¾⅛]|an?\s|half\s|one\s|two\s|a pinch)/i.test(l)&&l.length<140);
+  }
+  const t=lines.find(l=>l.length<100&&!/^ingredients/i.test(l)&&!/^(serves|makes|prep|cook|total)/i.test(l));
+  title=t||'';
+  const sm=text.match(/\b(?:serves|servings?|makes|yield)\s*:?\s*(\d{1,2})\b/i);
+  if(sm) servings=+sm[1];
+  ings=ings.filter(l=>l.length<160);
+  return {title,servings,ingredients:ings};
+}
+
+</script>
+<script>
+const KEY='rsl-v1';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function seed(){
+  return {
+    recipes:[
+      {id:'r1',title:'Spaghetti bolognese',url:'',servings:4,want:4,on:true,example:true,lines:['2 tbsp olive oil','1 large onion, finely chopped','2 carrots, grated','3 garlic cloves, crushed','500g beef mince','2 tbsp tomato puree','400g tin chopped tomatoes','200ml beef stock','1 tsp dried oregano','350g spaghetti','40g parmesan, grated','½ tsp salt','freshly ground black pepper']},
+      {id:'r2',title:'Chickpea and spinach curry',url:'',servings:4,want:4,on:true,example:true,lines:['2 tbsp olive oil','1 onion, diced','3 garlic cloves, minced','20g fresh ginger, grated','2 tsp garam masala','1 tsp ground cumin','1 tsp ground turmeric','400g tin chopped tomatoes','400g tin coconut milk','2 x 400g tins chickpeas, drained','200g baby spinach','250g basmati rice','½ lemon, juiced','small bunch fresh coriander','½ tsp salt']},
+      {id:'r3',title:'Sausage and potato traybake',url:'',servings:4,want:4,on:false,example:true,lines:['8 pork sausages','500g baby potatoes, halved','2 red onions, cut into wedges','2 courgettes, sliced','3 garlic cloves, whole','2 tbsp olive oil','1 tsp dried oregano','1 tbsp wholegrain mustard']}
+    ],
+    extras:[], checked:{}, have:{}, aisle:{}
+  };
+}
+function normalise(s){ s.extras=s.extras||[]; s.checked=s.checked||{}; s.have=s.have||{}; s.aisle=s.aisle||{}; return s; }
+function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)); if(s&&Array.isArray(s.recipes)) return normalise(s); }catch(e){} return null; }
+let S=load()||seed();
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+const U={tab:'list',open:{},sheet:null,detailId:null,editId:null,etab:'paste',confirmDel:false};
+let tt; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),1800); }
+function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return ''; } }
+const safeId=k=>k.replace(/[^a-z0-9]/gi,'-');
+
+/* ---------- list screen ---------- */
+function rowHTML(i,basket){
+  const ck=!!S.checked[i.key], open=!!U.open[i.key], id='tk-'+safeId(i.key);
+  const more=open?`<div class="detail"><ul>${i.contribs.map(c=>`<li><span>${esc(c.from)}</span><b>${esc(c.text)}</b></li>`).join('')}</ul>
+    <div class="drow"><label for="ai-${id}">Aisle</label><select id="ai-${id}" data-act="aisle" data-key="${esc(i.key)}">${AISLES.map(a=>`<option ${a===i.aisle?'selected':''}>${esc(a)}</option>`).join('')}</select>
+    <button class="btn small" data-act="have" data-key="${esc(i.key)}">Already have it</button></div></div>`:'';
+  return `<li class="row"><div class="rowmain"><label class="tick" for="${id}"><input type="checkbox" id="${id}" data-act="tick" data-key="${esc(i.key)}" ${ck?'checked':''}><span class="nm">${esc(i.name)}<small>${esc(i.sources.join(' · '))}</small></span></label>
+    <span class="qty">${esc(i.amount||'as needed')}</span>
+    <button class="morebtn" data-act="open" data-key="${esc(i.key)}" aria-label="Details for ${esc(i.name)}" aria-expanded="${open}">${open?'−':'⋯'}</button></div>${more}</li>`;
+}
+function listHTML(){
+  const items=compute(S);
+  const active=items.filter(i=>!S.have[i.key]);
+  const haveItems=items.filter(i=>S.have[i.key]);
+  const todo=active.filter(i=>!S.checked[i.key]);
+  const got=active.filter(i=>S.checked[i.key]).sort((a,b)=>a.name.localeCompare(b.name));
+  const onN=S.recipes.filter(r=>r.on).length;
+  const pct=active.length?Math.round(got.length/active.length*100):0;
+  let h=`<div class="summary"><div class="sumtop"><b>${todo.length} to get</b><span>${onN} ${onN===1?'recipe':'recipes'} · ${got.length} in basket</span></div>
+    <div class="progress" aria-hidden="true"><i style="width:${pct}%"></i></div>
+    <div class="sumbtns"><button class="btn small" data-act="copy">Copy remaining</button><button class="btn small" data-act="untick">Untick all</button></div><div id="copybox"></div></div>`;
+  if(!active.length){
+    h+=`<div class="empty">${S.recipes.length?'Switch on a recipe to build your list.':'Add a recipe to build your list.'}</div>`;
+  } else {
+    const by={}; todo.forEach(i=>(by[i.aisle]=by[i.aisle]||[]).push(i));
+    h+='<div class="grid">'+AISLES.filter(a=>by[a]).map(a=>{
+      const arr=by[a].sort((x,y)=>x.name.localeCompare(y.name));
+      return `<section class="card"><h2>${esc(a)}<span>${arr.length}</span></h2><ul class="rows">${arr.map(i=>rowHTML(i)).join('')}</ul></section>`;
+    }).join('');
+    if(got.length) h+=`<section class="card basket"><h2>In basket<span>${got.length}</span></h2><ul class="rows">${got.map(i=>rowHTML(i,true)).join('')}</ul></section>`;
+    h+='</div>';
+  }
+  h+=`<div class="grid" style="margin-top:12px"><section class="card addcard"><form id="extra-form"><label for="extra-in" style="position:absolute;left:-9999px">Add an extra item</label><input id="extra-in" type="text" placeholder="Add an item, e.g. 2 lemons" autocomplete="off" enterkeyhint="done"><button class="btn primary" type="submit">Add</button></form>
+    <div class="chips">${S.extras.map((x,n)=>`<span class="chip">${esc(x)}<button data-act="rmextra" data-n="${n}" aria-label="Remove ${esc(x)}">×</button></span>`).join('')}</div></section>`;
+  if(haveItems.length) h+=`<section class="card havecard"><details><summary>Already have (${haveItems.length})</summary><ul>${haveItems.map(i=>`<li><span>${esc(i.name)} <span class="meta" style="color:var(--muted)">${esc(i.amount)}</span></span><button class="btn small" data-act="unhave" data-key="${esc(i.key)}">Put back</button></li>`).join('')}</ul></details></section>`;
+  h+='</div>';
+  return h;
+}
+
+/* ---------- recipes screen ---------- */
+function recipesHTML(){
+  const cards=S.recipes.map(r=>{
+    const n=r.lines.filter(l=>parseLine(l)).length, host=hostOf(r.url);
+    return `<article class="rcard ${r.on?'on':''}">
+      <button class="rhead" data-act="toggle" data-id="${r.id}" aria-pressed="${r.on}" aria-label="${esc(r.title)}, ${r.on?'on the list':'off the list'}">
+        <span class="rtop"><span class="rtitle">${esc(r.title)}</span><span class="rbox" aria-hidden="true"></span></span>
+        <span class="meta">${n} ingredients${host?' · '+esc(host):''}</span>
+        ${r.example?'<span class="tag">Example</span>':''}
+      </button>
+      <div class="rfoot"><div class="stepper" role="group" aria-label="Servings"><button data-act="dec" data-id="${r.id}" aria-label="Fewer servings">−</button><output>${r.want}</output><button data-act="inc" data-id="${r.id}" aria-label="More servings">+</button></div>
+      <button class="btn small" data-act="detail" data-id="${r.id}">Details</button></div></article>`;
+  }).join('');
+  const hasEx=S.recipes.some(r=>r.example);
+  return `<div class="rgrid">${cards}<button class="newcard" data-act="new">+ Add recipe</button></div>
+  <div class="footlinks">
+    ${hasEx?'<button class="btn" data-act="rm-examples">Remove the example recipes</button>':''}
+    <section class="card"><details><summary>Back up or restore</summary>
+      <p>Recipes live only on this phone. Copy a backup and paste it into Notes or a message to keep it safe.</p>
+      <button class="btn small" data-act="backup">Copy backup</button>
+      <textarea id="restore-in" placeholder="Paste a backup here to restore it" aria-label="Backup text"></textarea>
+      <button class="btn small" data-act="restore">Restore from backup</button>
+    </details></section>
+  </div>`;
+}
+
+/* ---------- chrome + render ---------- */
+function chrome(){
+  $('title').textContent=U.tab==='list'?'Shopping list':'Recipes';
+  $('topact').innerHTML=U.tab==='recipes'?'<button class="btn primary small" data-act="new">Add</button>':'';
+  $('tab-list').setAttribute('aria-current',U.tab==='list'?'page':'false');
+  $('tab-recipes').setAttribute('aria-current',U.tab==='recipes'?'page':'false');
+  const n=compute(S).filter(i=>!S.have[i.key]&&!S.checked[i.key]).length;
+  $('tab-list').textContent='List'+(n?` (${n})`:'');
+}
+function render(keepScroll=true){
+  const y=window.scrollY;
+  $('screen').innerHTML=U.tab==='list'?listHTML():recipesHTML();
+  chrome(); save();
+  if(keepScroll) window.scrollTo(0,y);
+  if(U.sheet==='detail') renderDetail();
+}
+
+/* ---------- sheets ---------- */
+function openSheet(name){
+  U.sheet=name; $('sheet-'+name).hidden=false; document.body.style.overflow='hidden';
+  const b=$('sheet-'+name).querySelector('.sbody'); if(b) b.scrollTop=0;
+}
+function closeSheet(){
+  if(U.sheet){ $('sheet-'+U.sheet).hidden=true; }
+  U.sheet=null; U.confirmDel=false; document.body.style.overflow='';
+}
+function renderDetail(){
+  const r=S.recipes.find(x=>x.id===U.detailId); if(!r){ closeSheet(); return; }
+  $('d-title').textContent=r.title;
+  const host=hostOf(r.url);
+  const lines=r.lines.filter(l=>l.trim());
+  $('d-body').innerHTML=`<p class="hint">Recipe serves ${r.servings}${r.want!==r.servings?`. Shopping for ${r.want}.`:'.'}${host?` <a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(host)}</a>`:''}</p>
+    <ul class="plist">${lines.map(l=>{
+      const p=parseLine(l);
+      if(!p) return `<li><span>${esc(l)}</span><span class="p">heading</span></li>`;
+      const amt=p.fam==='none'?'no amount':fmtFam(p.fam,p.val*(r.want/r.servings),p.spoon);
+      return `<li class="${p.fam==='none'?'bad':''}"><span>${esc(l)}</span><span class="p">${esc(amt)}<br>${esc(p.name)}</span></li>`;
+    }).join('')}</ul>
+    <p class="hint">The right-hand column shows what the shopping list reads from each line, scaled to ${r.want} servings. Edit the recipe if a line looks wrong.</p>`;
+  $('d-foot').innerHTML=U.confirmDel
+    ?`<button class="btn danger" data-act="del-yes">Delete recipe</button><button class="btn" data-act="del-no">Keep</button>`
+    :`<button class="btn primary" data-act="edit" data-id="${r.id}">Edit</button><button class="btn danger" data-act="del">Delete</button>`;
+}
+function setEtab(t){
+  U.etab=t;
+  $('pane-paste').style.display=t==='paste'?'grid':'none';
+  $('pane-form').style.display=t==='form'?'flex':'none';
+  $('etab-paste').setAttribute('aria-pressed',t==='paste'); $('etab-form').setAttribute('aria-pressed',t==='form');
+  $('btn-save').style.display=t==='form'?'':'none';
+}
+function status(msg,err){ const s=$('ed-status'); s.textContent=msg||''; s.className='status'+(err?' err':''); }
+function openEditor(id){
+  closeSheet();
+  U.editId=id||null;
+  const r=id?S.recipes.find(x=>x.id===id):null;
+  $('ed-heading').textContent=r?'Edit recipe':'Add a recipe';
+  $('ed-title').value=r?r.title:''; $('ed-serves').value=r?r.servings:4; $('ed-url').value=r?r.url||'':''; $('ed-lines').value=r?r.lines.join('\n'):''; $('ed-paste').value='';
+  status('');
+  $('seg').style.display=r?'none':'grid';
+  setEtab(r?'form':'paste');
+  openSheet('edit');
+}
+function extract(){
+  const text=$('ed-paste').value.trim();
+  if(!text){ status('Paste some recipe text first.',true); return; }
+  const res=extractLocal(text);
+  if(!res.ingredients.length){ status('No ingredients found. Switch to Write my own and type them in.',true); setEtab('form'); return; }
+  $('ed-title').value=res.title||''; $('ed-serves').value=res.servings||4; $('ed-lines').value=res.ingredients.join('\n');
+  setEtab('form');
+  status('Ingredients found. Check the amounts and the name, then save.');
+}
+function saveRecipe(){
+  const lines=$('ed-lines').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  if(!lines.length){ status('Add at least one ingredient.',true); return; }
+  const title=$('ed-title').value.trim()||'Untitled recipe';
+  const servings=Math.max(1,Math.min(99,parseInt($('ed-serves').value,10)||4));
+  let url=$('ed-url').value.trim(); if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
+  if(U.editId){
+    const r=S.recipes.find(x=>x.id===U.editId); const keep=r.want===r.servings;
+    Object.assign(r,{title,url,servings,lines,example:false}); r.want=keep?servings:r.want;
+  } else {
+    S.recipes.unshift({id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),title,url,servings,want:servings,on:true,lines});
+  }
+  closeSheet(); U.tab='recipes'; render(false); window.scrollTo(0,0); toast('Recipe saved');
+}
+
+/* ---------- actions ---------- */
+function listText(){
+  const items=compute(S).filter(i=>!S.have[i.key]&&!S.checked[i.key]);
+  const by={}; items.forEach(i=>(by[i.aisle]=by[i.aisle]||[]).push(i));
+  return AISLES.filter(a=>by[a]).map(a=>a+'\n'+by[a].sort((x,y)=>x.name.localeCompare(y.name)).map(i=>'- '+i.name+(i.amount?' ('+i.amount+')':'')).join('\n')).join('\n\n');
+}
+async function copyText(txt,okMsg){
+  try{ await navigator.clipboard.writeText(txt); toast(okMsg); return true; }catch(e){ return false; }
+}
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-act]'); if(!t||t.tagName==='INPUT'||t.tagName==='SELECT') return;
+  const a=t.dataset.act, id=t.dataset.id, key=t.dataset.key;
+  const r=id?S.recipes.find(x=>x.id===id):null;
+  switch(a){
+    case 'tab': U.tab=t.dataset.t; closeSheet(); render(false); window.scrollTo(0,0); break;
+    case 'new': openEditor(null); break;
+    case 'close': closeSheet(); break;
+    case 'etab': setEtab(t.dataset.t); break;
+    case 'extract': extract(); break;
+    case 'save': saveRecipe(); break;
+    case 'toggle': if(r){ r.on=!r.on; render(); } break;
+    case 'inc': if(r){ r.want=Math.min(99,r.want+1); render(); } break;
+    case 'dec': if(r){ r.want=Math.max(1,r.want-1); render(); } break;
+    case 'detail': U.detailId=id; U.confirmDel=false; openSheet('detail'); renderDetail(); break;
+    case 'edit': openEditor(id); break;
+    case 'del': U.confirmDel=true; renderDetail(); break;
+    case 'del-no': U.confirmDel=false; renderDetail(); break;
+    case 'del-yes': S.recipes=S.recipes.filter(x=>x.id!==U.detailId); closeSheet(); render(); toast('Recipe deleted'); break;
+    case 'rm-examples': S.recipes=S.recipes.filter(x=>!x.example); render(); toast('Examples removed'); break;
+    case 'open': U.open[key]=!U.open[key]; render(); break;
+    case 'have': S.have[key]=true; render(); break;
+    case 'unhave': delete S.have[key]; render(); break;
+    case 'untick': S.checked={}; render(); break;
+    case 'rmextra': S.extras.splice(+t.dataset.n,1); render(); break;
+    case 'copy': {
+      const txt=listText(); if(!txt){ toast('Nothing left to copy'); break; }
+      if(!await copyText(txt,'List copied')){ $('copybox').innerHTML='<textarea aria-label="Shopping list text" style="width:100%;height:160px;margin-top:10px;border:1px solid var(--ink);padding:8px;font-size:16px"></textarea>'; const ta=$('copybox').firstChild; ta.value=txt; ta.focus(); ta.select(); }
+      break; }
+    case 'backup': {
+      const txt=JSON.stringify(S);
+      if(!await copyText(txt,'Backup copied')){ const ta=$('restore-in'); ta.value=txt; ta.focus(); ta.select(); toast('Select and copy the text below'); }
+      break; }
+    case 'restore': {
+      try{
+        const v=JSON.parse($('restore-in').value.trim());
+        if(!v||!Array.isArray(v.recipes)||v.recipes.some(x=>!x||typeof x.title!=='string'||!Array.isArray(x.lines))) throw 0;
+        S=normalise(v); render(false); toast('Restored '+S.recipes.length+' recipes');
+      }catch(err){ toast('That is not a valid backup'); }
+      break; }
+  }
+});
+document.addEventListener('change',e=>{
+  const t=e.target; if(!t.dataset||!t.dataset.act) return;
+  if(t.dataset.act==='tick'){ if(t.checked) S.checked[t.dataset.key]=true; else delete S.checked[t.dataset.key]; render(); }
+  else if(t.dataset.act==='aisle'){ S.aisle[t.dataset.key]=t.value; render(); }
+});
+document.addEventListener('submit',e=>{
+  if(e.target.id!=='extra-form') return;
+  e.preventDefault(); const v=$('extra-in').value.trim(); if(!v) return;
+  S.extras.push(v); render();
+});
+render(false);
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+</script>
+</body>
+</html>
